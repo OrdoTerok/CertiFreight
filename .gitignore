@@ -1,0 +1,36 @@
+# ==========================================
+# Target & Compilation Output (Java/Maven)
+# ==========================================
+**/target/
+**/pom.xml.tag
+**/pom.xml.releaseBackup
+**/pom.xml.versionsBackup
+**/pom.xml.next
+**/*.versionsBackup
+release.properties
+dependency-reduced-pom.xml
+
+# ==========================================
+# IDE Configuration Metadata (JetBrains IntelliJ)
+# ==========================================
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.cr.http
+api-test.http
+
+# ==========================================
+# Operating System Artifacts
+# ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==========================================
+# Local Docker & Infrastructure Configurations
+# ==========================================
+**/postgres-data/
+**/.env.local
+**/*.log

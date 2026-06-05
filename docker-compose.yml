@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17.10
+    container_name: certifreight-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: certifreight
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - certifreight_db_data:/var/lib/postgresql/data
+
+volumes:
+  certifreight_db_data:
+    driver: local

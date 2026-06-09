@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import axiosClient from '../api/axiosClient';
-import type {Shipment} from '../types';
+import { RoleGuard } from './RoleGuard';
+import type { Shipment } from '../types';
 
 export const Dashboard = () => {
-    const { activeTenantId, login, logout, isLoading } = useAuth();
+    const { activeTenantId, activeRole, login, logout, isLoading } = useAuth();
     const [shipments, setShipments] = useState<Shipment[]>([]);
     const [apiError, setApiError] = useState<string | null>(null);
 
-    // Automatically synchronize shipment panels whenever the logged-in tenant changes
+    const [trackingNumber, setTrackingNumber] = useState('');
+    const [weightLbs, setWeightLbs] = useState<number | ''>('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     useEffect(() => {
         if (activeTenantId) {
             fetchShipments();
@@ -16,7 +20,7 @@ export const Dashboard = () => {
             setShipments([]);
             setApiError(null);
         }
-    }, [activeTenantId]);
+    }, [activeTenantId, activeRole]);
 
     const fetchShipments = async () => {
         setApiError(null);
@@ -25,7 +29,6 @@ export const Dashboard = () => {
             setShipments(response.data);
         } catch (error: any) {
             console.error('API Error:', error);
-            // Catch and display our structured backend RFC 7807 error details if available
             const errorDetail = error.response?.data?.detail || 'HTTP Error: Context Violation';
             setApiError(errorDetail);
             setShipments([]);
@@ -33,104 +36,310 @@ export const Dashboard = () => {
     };
 
     const handleSeedShipment = async () => {
+        setApiError(null);
         try {
             await axiosClient.post('/shipments/seed');
-            fetchShipments(); // Refresh the list
+            fetchShipments(); // Refresh table state matrix
         } catch (error: any) {
-            setApiError(error.response?.data?.detail || 'Failed to seed record');
+            const detail = error.response?.data?.detail || 'Failed to trigger remote seed routing';
+            setApiError(`Seeding Failure: ${detail}`);
         }
     };
 
-    // Explicitly bypasses our Axios interceptor token to force a real backend security breach test
+    const handleGenerateTracking = () => {
+        const randomHex = Math.random().toString(36).substring(2, 8).toUpperCase();
+        setTrackingNumber(`CFT-${randomHex}`);
+    };
+
+    const handleCreateShipment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setApiError(null);
+        setIsSubmitting(true);
+
+        try {
+            await axiosClient.post('/shipments', {
+                trackingNumber,
+                weightLbs: weightLbs === '' ? null : Number(weightLbs)
+            });
+            setTrackingNumber('');
+            setWeightLbs('');
+            fetchShipments();
+        } catch (error: any) {
+            const detail = error.response?.data?.detail || 'Server side parsing error';
+            setApiError(detail);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteShipment = async (id: number) => {
+        setApiError(null);
+        try {
+            await axiosClient.delete(`/shipments/${id}`);
+            fetchShipments();
+        } catch (error: any) {
+            console.error('Deletion Blocked:', error);
+            const detail = error.response?.data?.detail || 'HTTP 403 Forbidden: Insufficient Authority';
+            setApiError(`RBAC Violation: ${detail}`);
+        }
+    };
+
     const handleSimulateBreach = async () => {
         setApiError(null);
         try {
             const unauthenticatedResponse = await axiosClient.get('/shipments', {
-                headers: { Authorization: '' } // Wipe the token header completely
+                headers: { Authorization: '' }
             });
             setShipments(unauthenticatedResponse.data);
         } catch (error: any) {
             const detail = error.response?.data?.detail || 'Access Denied';
-            setApiError(`Breach Successfully Blocked by Backend! Error: "${detail}"`);
+            setApiError(`Breach Blocked by Gateway: "${detail}"`);
             setShipments([]);
         }
     };
 
     return (
-        <div style={{ padding: '2rem', fontFamily: 'sans-serif', maxWidth: '900px', margin: '0 auto' }}>
-            <header style={{ borderBottom: '2px solid #eaeaea', paddingBottom: '1rem', marginBottom: '2rem' }}>
-                <h1>CertiFreight Logistics Management Portal</h1>
-                <p>Status: <strong>{activeTenantId ? `Authenticated as [${activeTenantId}]` : 'Unauthenticated'}</strong></p>
+        <div className="min-h-screen flex flex-col bg-slate-950 font-sans text-slate-100">
+            {/* Top Enterprise Banner Nav */}
+            <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+                <div>
+                    <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                        CertiFreight Portal
+                    </h1>
+                    <p className="text-xs text-slate-400">Zero-Trust Multi-Tenant Freight Management</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="text-xs font-mono text-slate-300 bg-slate-800 px-2.5 py-1 rounded-md border border-slate-700">
+                        {activeTenantId ? `CONTEXT // ${activeTenantId.toUpperCase()} // ${activeRole}` : 'NO_AUTHENTICATED_CONTEXT'}
+                    </span>
+                </div>
             </header>
 
-            {/* Authentication Matrix Controls */}
-            <section style={{ marginBottom: '2rem', background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
-                <h3>Select Active Identity Profile</h3>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button disabled={isLoading} onClick={() => login('enterprise-alpha')} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
-                        Login: Tenant Alpha
-                    </button>
-                    <button disabled={isLoading} onClick={() => login('enterprise-beta')} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
-                        Login: Tenant Beta
-                    </button>
-                    <button onClick={logout} style={{ padding: '0.5rem 1rem', cursor: 'pointer', background: '#ffebeb', border: '1px solid #ffcccc' }}>
-                        Clear Session
-                    </button>
-                </div>
-            </section>
+            {/* Main Asymmetric Grid Split */}
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-6 p-6 max-w-7xl w-full mx-auto">
 
-            {/* Error & Security Alert Logging Box */}
-            {apiError && (
-                <div style={{ background: '#fff5f5', color: '#cc0000', padding: '1rem', borderRadius: '6px', border: '1px solid #ffcccc', marginBottom: '2rem' }}>
-                    <strong>Security Event Alert:</strong> {apiError}
-                </div>
-            )}
+                {/* Left Control Sidebar */}
+                <aside className="space-y-6 md:col-span-1">
+                    <div className="bg-slate-900 rounded-xl border border-slate-800 p-5 space-y-4">
+                        <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase">
+                            Identity Profile Matrix
+                        </h2>
 
-            {/* Main Application Ledger Views */}
-            {activeTenantId && (
-                <section>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h2>Data Isolation Ledger Display</h2>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button onClick={handleSeedShipment} style={{ padding: '0.5rem 1rem', cursor: 'pointer', background: '#e6f4ea', border: '1px solid #ceead6' }}>
-                                + Seed Isolated Shipment
-                            </button>
-                            <button onClick={handleSimulateBreach} style={{ padding: '0.5rem 1rem', cursor: 'pointer', background: '#feefe3', border: '1px solid #fde2cd', color: '#b06000' }}>
-                                Simulate Security Breach
-                            </button>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Tenant: Alpha</label>
+                                <div className="flex flex-col gap-1.5">
+                                    <button
+                                        disabled={isLoading}
+                                        onClick={() => login('enterprise-alpha', 'ROLE_DISPATCHER')}
+                                        className={`w-full py-2 px-3 text-xs font-medium rounded-lg border text-left transition-all ${
+                                            activeTenantId === 'enterprise-alpha' && activeRole === 'ROLE_DISPATCHER'
+                                                ? 'bg-blue-600/10 border-blue-500 text-blue-400 font-semibold'
+                                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                                        }`}
+                                    >
+                                        Alpha: Dispatcher
+                                    </button>
+                                    <button
+                                        disabled={isLoading}
+                                        onClick={() => login('enterprise-alpha', 'ROLE_ADMIN')}
+                                        className={`w-full py-2 px-3 text-xs font-medium rounded-lg border text-left transition-all ${
+                                            activeTenantId === 'enterprise-alpha' && activeRole === 'ROLE_ADMIN'
+                                                ? 'bg-purple-600/10 border-purple-500 text-purple-400 font-semibold'
+                                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                                        }`}
+                                    >
+                                        Alpha: Manager Admin
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="border-t border-slate-800/60 pt-3">
+                                <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Tenant: Beta</label>
+                                <div className="flex flex-col gap-1.5">
+                                    <button
+                                        disabled={isLoading}
+                                        onClick={() => login('enterprise-beta', 'ROLE_DISPATCHER')}
+                                        className={`w-full py-2 px-3 text-xs font-medium rounded-lg border text-left transition-all ${
+                                            activeTenantId === 'enterprise-beta' && activeRole === 'ROLE_DISPATCHER'
+                                                ? 'bg-blue-600/10 border-blue-500 text-blue-400 font-semibold'
+                                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                                        }`}
+                                    >
+                                        Beta: Dispatcher
+                                    </button>
+                                    <button
+                                        disabled={isLoading}
+                                        onClick={() => login('enterprise-beta', 'ROLE_ADMIN')}
+                                        className={`w-full py-2 px-3 text-xs font-medium rounded-lg border text-left transition-all ${
+                                            activeTenantId === 'enterprise-beta' && activeRole === 'ROLE_ADMIN'
+                                                ? 'bg-purple-600/10 border-purple-500 text-purple-400 font-semibold'
+                                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                                        }`}
+                                    >
+                                        Beta: Manager Admin
+                                    </button>
+                                </div>
+                            </div>
+
+                            {activeTenantId && (
+                                <button
+                                    onClick={logout}
+                                    className="w-full mt-2 py-2 px-4 text-xs font-medium bg-slate-950 hover:bg-rose-950/20 text-rose-400 rounded-lg border border-slate-800 hover:border-rose-900/50 transition-colors duration-150 text-center"
+                                >
+                                    Terminate Active Session
+                                </button>
+                            )}
                         </div>
                     </div>
 
-                    {shipments.length === 0 ? (
-                        <p style={{ color: '#666', fontStyle: 'italic' }}>No shipments found matching this organizational domain visibility matrix.</p>
-                    ) : (
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                            <thead>
-                            <tr style={{ background: '#f4f4f4' }}>
-                                <th style={{ padding: '0.75rem', borderBottom: '1px solid #ddd' }}>ID</th>
-                                <th style={{ padding: '0.75rem', borderBottom: '1px solid #ddd' }}>Tracking Number</th>
-                                <th style={{ padding: '0.75rem', borderBottom: '1px solid #ddd' }}>Status</th>
-                                <th style={{ padding: '0.75rem', borderBottom: '1px solid #ddd' }}>Tenant Scope Owner</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {shipments.map((shipment) => (
-                                <tr key={shipment.id}>
-                                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #ddd' }}>{shipment.id}</td>
-                                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #ddd' }}><code>{shipment.trackingNumber}</code></td>
-                                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #ddd' }}>
-                                            <span style={{ background: '#e8f0fe', color: '#1a73e8', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>
-                                                {shipment.status}
-                                            </span>
-                                    </td>
-                                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #ddd', color: '#666' }}>{shipment.tenantId}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
+                    {/* Freight Assignment Form Component */}
+                    {activeTenantId && (
+                        <RoleGuard allowedRoles={['ROLE_ADMIN', 'ROLE_DISPATCHER']}>
+                            <div className="bg-slate-900 rounded-xl border border-slate-800 p-5 space-y-4">
+                                <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase">
+                                    Assign Isolated Freight
+                                </h2>
+                                <form onSubmit={handleCreateShipment} className="space-y-3.5">
+                                    <div>
+                                        <label className="block text-xs font-medium text-slate-400 mb-1">Tracking Number</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={trackingNumber}
+                                                onChange={(e) => setTrackingNumber(e.target.value)}
+                                                placeholder="CFT-XXXXXX"
+                                                className="flex-1 bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-sm font-mono text-blue-400 focus:outline-none"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleGenerateTracking}
+                                                className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-semibold border border-slate-700 transition-colors"
+                                            >
+                                                ⚡
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-slate-400 mb-1">Cargo Weight (lbs)</label>
+                                        <input
+                                            type="number"
+                                            value={weightLbs}
+                                            onChange={(e) => setWeightLbs(e.target.value === '' ? '' : Number(e.target.value))}
+                                            placeholder="e.g. 2500"
+                                            className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="w-full py-2 px-4 mt-2 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all shadow-md shadow-blue-950/20"
+                                    >
+                                        {isSubmitting ? 'Registering Manifest...' : 'Commit Freight Link'}
+                                    </button>
+                                </form>
+                            </div>
+                        </RoleGuard>
                     )}
-                </section>
-            )}
+                </aside>
+
+                {/* Right Metrics Ledger Workspace */}
+                <main className="md:col-span-3 space-y-6">
+                    {/* Error & Security Alert Logging Box */}
+                    {apiError && (
+                        <div className="bg-rose-950/20 border border-rose-900/50 rounded-xl p-4 flex gap-3 text-sm text-rose-300 shadow-lg shadow-rose-950/10">
+                            <div className="font-semibold select-none">⚠️ SYSTEM_ALERT:</div>
+                            <div className="font-mono">{apiError}</div>
+                        </div>
+                    )}
+
+                    {activeTenantId ? (
+                        <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-xl">
+                            {/* Ledger Table Controls Panel */}
+                            <div className="p-5 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/50">
+                                <div>
+                                    <h2 className="text-lg font-bold">Isolated Freight Ledger</h2>
+                                    <p className="text-xs text-slate-400">Database queries natively scoped via Hibernate @TenantId boundaries</p>
+                                </div>
+                                {/* RESTORED: Symmetrical Control Button Actions Array */}
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    <button
+                                        onClick={handleSeedShipment}
+                                        className="flex-1 sm:flex-none py-2 px-3.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-md shadow-emerald-950/20 transition-all duration-150"
+                                    >
+                                        + Seed Test Cargo
+                                    </button>
+                                    <button
+                                        onClick={handleSimulateBreach}
+                                        className="flex-1 sm:flex-none py-2 px-3.5 text-xs font-semibold bg-amber-600/10 hover:bg-amber-600/20 border border-amber-500/30 hover:border-amber-500/50 text-amber-400 rounded-lg transition-all duration-150"
+                                    >
+                                        Simulate System Breach Test
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Data Rendering Matrix */}
+                            <div className="overflow-x-auto">
+                                {shipments.length === 0 ? (
+                                    <div className="p-8 text-center text-sm text-slate-500 italic">
+                                        No active manifest payloads indexed under this organizational scope footprint.
+                                    </div>
+                                ) : (
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                        <tr className="bg-slate-950/50 text-slate-400 uppercase text-xs font-semibold tracking-wider border-b border-slate-800">
+                                            <th className="p-4">Cargo ID</th>
+                                            <th className="p-4">Tracking Reference</th>
+                                            <th className="p-4">Cargo Weight</th>
+                                            <th className="p-4">Logistics Status</th>
+                                            <th className="p-4 text-right">Actions Matrix</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-800/60 text-sm">
+                                        {shipments.map((shipment) => (
+                                            <tr key={shipment.id} className="hover:bg-slate-800/30 transition-colors duration-100">
+                                                <td className="p-4 font-mono font-bold text-slate-400">#{shipment.id}</td>
+                                                <td className="p-4"><code className="text-blue-400 font-mono text-xs">{shipment.trackingNumber}</code></td>
+                                                <td className="p-4 font-mono text-slate-300">
+                                                    {shipment.weightLbs ? `${Number(shipment.weightLbs).toLocaleString()} lbs` : '—'}
+                                                </td>
+                                                <td className="p-4">
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                                                            {shipment.status}
+                                                        </span>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <RoleGuard
+                                                        allowedRoles={['ROLE_ADMIN']}
+                                                        fallback={
+                                                            <span className="text-xs text-slate-600 font-mono italic select-none">
+                                                                READ_ONLY // LOCKED
+                                                            </span>
+                                                        }>
+                                                        <button
+                                                            onClick={() => handleDeleteShipment(shipment.id)}
+                                                            className="text-xs font-semibold py-1 px-2.5 bg-rose-950/30 hover:bg-rose-600 border border-rose-900/50 hover:border-rose-500 text-rose-400 hover:text-white rounded-md transition-all duration-150"
+                                                        >
+                                                            Purge Record
+                                                        </button>
+                                                    </RoleGuard>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="h-64 flex flex-col items-center justify-center border border-dashed border-slate-800 rounded-xl text-center p-6 bg-slate-900/20">
+                            <div className="text-slate-400 text-sm font-semibold mb-1">Gateway Authentication Required</div>
+                            <p className="text-xs text-slate-500 max-w-xs">Select an active corporate tenant identity core from the sidebar matrix to initialize the cryptographic pipeline and retrieve records.</p>
+                        </div>
+                    )}
+                </main>
+            </div>
         </div>
     );
 };

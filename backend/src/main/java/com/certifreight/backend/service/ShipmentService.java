@@ -1,6 +1,9 @@
 package com.certifreight.backend.service;
 
 import com.certifreight.backend.model.Shipment;
+import com.certifreight.backend.model.ShipmentRequest;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 public interface ShipmentService {
@@ -15,4 +18,10 @@ public interface ShipmentService {
      * record if it doesn't exist yet.
      */
     Shipment seedTestShipmentForActiveTenant();
+
+    @Transactional
+    Shipment createShipment(ShipmentRequest request);
+
+    @Transactional
+    void deleteShipment(Long id);
 }

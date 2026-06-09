@@ -1,15 +1,16 @@
 package com.certifreight.backend.service;
 
 import com.certifreight.backend.model.Shipment;
-import com.certifreight.backend.model.Tenant;
+import com.certifreight.backend.model.ShipmentRequest;
 import com.certifreight.backend.repository.ShipmentRepository;
-import com.certifreight.backend.repository.TenantRepository;
-import com.certifreight.backend.security.TenantContext;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -19,7 +20,9 @@ import java.util.List;
 public class ShipmentServiceImpl implements ShipmentService {
 
     private final ShipmentRepository shipmentRepository;
-    private final TenantRepository tenantRepository;
+
+    @PersistenceContext
+    private final EntityManager entityManager;
 
     @Override
     public List<Shipment> getShipmentsForActiveTenant() {
@@ -32,18 +35,21 @@ public class ShipmentServiceImpl implements ShipmentService {
     public Shipment seedTestShipmentForActiveTenant() {
         String activeTenantId = resolveActiveTenant();
 
-        if (!tenantRepository.existsById(activeTenantId)) {
-            log.info("Provisioning initial parent tenant record for ID: {}", activeTenantId);
-            Tenant newTenant = Tenant.builder()
-                    .id(activeTenantId)
-                    .companyName(activeTenantId.toUpperCase().replace("-", " "))
-                    .build();
-            tenantRepository.save(newTenant);
-        }
+        log.info("Executing idempotent database write for tenant context: {}", activeTenantId);
+
+        entityManager.createNativeQuery("""
+            INSERT INTO tenants (id, company_name)
+            VALUES (?, ?)
+            ON CONFLICT (id) DO NOTHING
+        """)
+                .setParameter(1, activeTenantId)
+                .setParameter(2, activeTenantId.toUpperCase().replace("-", " "))
+                .executeUpdate();
 
         Shipment mockShipment = Shipment.builder()
                 .tenantId(activeTenantId)
                 .trackingNumber("TRK-" + System.currentTimeMillis())
+                .weightLbs(new BigDecimal("5500.00"))
                 .status("PROCESSING_FREIGHT")
                 .build();
 
@@ -56,11 +62,25 @@ public class ShipmentServiceImpl implements ShipmentService {
      * security exception if an unauthenticated thread bypasses the gateway.
      */
     private String resolveActiveTenant() {
-        String tenantId = TenantContext.getTenantId();
-        if (tenantId == null || tenantId.trim().isEmpty()) {
-            log.error("Multi-tenant execution failure: No active tenant bound to thread context");
-            throw new IllegalStateException("Access Denied: Missing organization scope");
-        }
-        return tenantId;
+        return org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal().toString();
+    }
+
+    @Transactional
+    @Override
+    public Shipment createShipment(ShipmentRequest request) {
+        Shipment shipment = new Shipment();
+
+        shipment.setTrackingNumber(request.getTrackingNumber());
+        shipment.setWeightLbs(request.getWeightLbs());
+        shipment.setStatus("MANIFEST_CREATED");
+
+        return shipmentRepository.save(shipment);
+    }
+
+    @Override
+    @Transactional
+    public void deleteShipment(Long id) {
+        shipmentRepository.deleteById(id);
     }
 }

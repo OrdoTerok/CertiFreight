@@ -5,7 +5,8 @@ import type {AuthResponse} from '../types';
 interface AuthContextType {
     token: string | null;
     activeTenantId: string | null;
-    login: (tenantId: string) => Promise<void>;
+    activeRole: string | null; // Added state exposure
+    login: (tenantId: string, role: string) => Promise<void>; // Updated signature
     logout: () => void;
     isLoading: boolean;
 }
@@ -16,20 +17,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [token, setToken] = useState<string | null>(localStorage.getItem('certifreight_token'));
     const [activeTenantId, setActiveTenantId] = useState<string | null>(localStorage.getItem('certifreight_tenant_id'));
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [activeRole, setActiveRole] = useState<string | null>(localStorage.getItem('certifreight_role'));
 
-    const login = async (tenantId: string) => {
+    const login = async (tenantId: string, role: string) => {
         setIsLoading(true);
         try {
-            // Hit our decoupled backend authentication controller
-            const response = await axiosClient.post<AuthResponse>(`/auth/login?tenantId=${tenantId}`);
+            const response = await axiosClient.post<AuthResponse>(`/auth/login?tenantId=${tenantId}&role=${role}`);
             const { accessToken } = response.data;
 
-            // Commit the cryptographic credentials to local storage and state
             localStorage.setItem('certifreight_token', accessToken);
             localStorage.setItem('certifreight_tenant_id', tenantId);
+            localStorage.setItem('certifreight_role', role);
 
             setToken(accessToken);
             setActiveTenantId(tenantId);
+            setActiveRole(role);
         } catch (error) {
             console.error('Authentication gatekeeper rejected login:', error);
             throw error;
@@ -41,12 +43,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const logout = () => {
         localStorage.removeItem('certifreight_token');
         localStorage.removeItem('certifreight_tenant_id');
+        localStorage.removeItem('certifreight_role');
         setToken(null);
         setActiveTenantId(null);
+        setActiveRole(null);
     };
 
     return (
-        <AuthContext.Provider value={{ token, activeTenantId, login, logout, isLoading }}>
+        <AuthContext.Provider value={{ token, activeTenantId, activeRole, login, logout, isLoading }}>
             {children}
         </AuthContext.Provider>
     );

@@ -10,8 +10,6 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey; // Strict type-safe import
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 public class JwtService {
@@ -30,18 +28,17 @@ public class JwtService {
     }
 
     /**
-     * Generates a signed cryptographic token packing the tenant scope claim.
+     * Builds and cryptographically signs a compact JWT payload containing
+     * structural Multi-Tenancy and RBAC claims.
      */
-    public String generateToken(String tenantId) {
-        Map<String, Object> claimsMap = new HashMap<>();
-        claimsMap.put("tenantId", tenantId);
-
+    public String generateToken(String tenantId, String role) {
         return Jwts.builder()
-                .claims(claimsMap)
                 .subject(tenantId)
+                .claim("tenantId", tenantId)
+                .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(signingKey)
+                .expiration(new Date(System.currentTimeMillis() + 86400000)) // Active for 24 Hours
+                .signWith(signingKey) // Safely references the class-level SecretKey field directly
                 .compact();
     }
 
@@ -49,12 +46,18 @@ public class JwtService {
      * Extracts and validates the tenant ID claim out of an active token string.
      */
     public String extractTenantId(String token) {
-        Claims claims = Jwts.parser()
+        return extractAllClaims(token).getSubject();
+    }
+
+    public Claims extractAllClaims(String token) {
+        return Jwts.parser()
                 .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
 
-        return claims.get("tenantId", String.class);
+    public boolean isTokenExpired(String token) {
+        return extractAllClaims(token).getExpiration().before(new java.util.Date());
     }
 }

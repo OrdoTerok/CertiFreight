@@ -1,22 +1,24 @@
-// @ts-ignore
-import { Navigate, Outlet } from 'react-router-dom';
+import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 interface ProtectedRouteProps {
-    allowedRoles?: string[];
-    redirectTo?: string;
+    children: React.ReactNode;
 }
 
-export const ProtectedRoute = ({ allowedRoles, redirectTo = "/" }: ProtectedRouteProps) => {
-    const { token, activeRole } = useAuth();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+    const { token, isLoading } = useAuth();
 
+    // 1. If the authentication context is initializing, hold the rendering frame
+    if (isLoading) {
+        return null;
+    }
+
+    // 2. If no valid authorization vector exists, force intercept and redirect
     if (!token) {
-        return <Navigate to={redirectTo} replace />;
+        return <Navigate to="/login" replace />;
     }
 
-    if (allowedRoles && (!activeRole || !allowedRoles.includes(activeRole))) {
-        return <Navigate to="/unauthorized" replace />;
-    }
-
-    return <Outlet />;
+    // 3. Identity verified safely, render the enclosed component stream cleanly
+    return <>{children}</>;
 };

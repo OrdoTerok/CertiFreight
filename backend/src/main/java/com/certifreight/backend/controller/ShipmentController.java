@@ -37,11 +37,11 @@ public class ShipmentController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ROLE_DISPATCHER')")
     public ResponseEntity<Shipment> createShipment(
             @Valid @RequestBody ShipmentRequest request,
             @RequestHeader(value = "X-Tenant-ID", required = false) String tenantId) {
 
-        // The TenantContext is already bound by your TenantFilter filter layer from the JWT
         Shipment created = shipmentService.createShipment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }

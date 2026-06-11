@@ -1,24 +1,38 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import React, { useContext } from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext'; // Direct import of your exported context
 
 interface ProtectedRouteProps {
-    children: React.ReactNode;
+    allowedRoles: string[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-    const { token, isLoading } = useAuth();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+    const authContext = useContext(AuthContext);
 
-    // 1. If the authentication context is initializing, hold the rendering frame
+    // Safety fallback if context is consumed outside of provider bounds
+    if (!authContext) {
+        throw new Error('ProtectedRoute must be used within an AuthProvider block.');
+    }
+
+    // Extract variables explicitly typed in your AuthContextType
+    const { token, activeRole, isLoading } = authContext;
+
     if (isLoading) {
-        return null;
+        return <div className="text-white p-6">Loading security context...</div>;
     }
 
-    // 2. If no valid authorization vector exists, force intercept and redirect
+    // 1. Authentication Check: Is there a token string present?
     if (!token) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/" replace />;
     }
 
-    // 3. Identity verified safely, render the enclosed component stream cleanly
-    return <>{children}</>;
+    // 2. Authorization Check: Is the active single string role inside the allowed array?
+    const hasRequiredRole = activeRole && allowedRoles.includes(activeRole);
+
+    if (!hasRequiredRole) {
+        return <Navigate to="/unauthorized" replace />;
+    }
+
+    // If both matches clear, render sub-route elements
+    return <Outlet />;
 };

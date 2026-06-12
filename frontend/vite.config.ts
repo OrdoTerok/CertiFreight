@@ -1,13 +1,22 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from "@tailwindcss/vite";
+import istanbul from 'vite-plugin-istanbul';
+
+const plugins = [
+    tailwindcss(),
+    react(),
+    ...(process.env.E2E_COVERAGE === 'true' ? [istanbul({
+        include: 'src/**/*',
+        exclude: ['node_modules', 'e2e', 'src/test', '**/*.test.ts', '**/*.test.tsx'],
+        extension: ['.ts', '.tsx'],
+        requireEnv: false,
+    })] : []),
+];
 
 // https://vite.dev/config/
 export default defineConfig({
-    plugins: [
-        tailwindcss(),
-        react()
-    ],
+    plugins,
     test: {
         globals: true,
         environment: 'jsdom',

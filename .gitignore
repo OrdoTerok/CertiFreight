@@ -34,3 +34,11 @@ desktop.ini
 **/postgres-data/
 **/.env.local
 **/*.log
+
+# ==========================================
+# Frontend E2E / Coverage Artifacts
+# ==========================================
+frontend/.nyc_output/
+frontend/coverage-e2e/
+frontend/playwright-report/
+frontend/test-results/

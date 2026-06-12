@@ -20,8 +20,14 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -85,6 +91,25 @@ public class ShipmentControllerComponentTest {
 
     @Test
     @WithMockUser(roles = "DISPATCHER")
+    public void shouldSeedShipmentForActiveTenant() throws Exception {
+        Shipment seededShipment = new Shipment();
+        seededShipment.setId(10L);
+        seededShipment.setTrackingNumber("TRK-SEED-1");
+        seededShipment.setStatus("PROCESSING_FREIGHT");
+
+        when(shipmentService.seedTestShipmentForActiveTenant()).thenReturn(seededShipment);
+
+        mockMvc.perform(post("/api/shipments/seed"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10L))
+                .andExpect(jsonPath("$.trackingNumber").value("TRK-SEED-1"))
+                .andExpect(jsonPath("$.status").value("PROCESSING_FREIGHT"));
+
+        verify(shipmentService, times(1)).seedTestShipmentForActiveTenant();
+    }
+
+    @Test
+    @WithMockUser(roles = "DISPATCHER")
     public void shouldAcceptAndCommitValidFreightLinkManifest() throws Exception {
         Map<String, Object> inputPayload = Map.of(
                 "trackingNumber", "CFT-333333",
@@ -104,7 +129,11 @@ public class ShipmentControllerComponentTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inputPayload)))
                 .andDo(print())
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.trackingNumber").value("CFT-333333"))
+                .andExpect(jsonPath("$.status").value("MANIFEST_CREATED"));
+
+        verify(shipmentService, times(1)).createShipment(any());
     }
 
     @Test
@@ -120,6 +149,48 @@ public class ShipmentControllerComponentTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inputPayload)))
                 .andDo(print())
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isForbidden());
+
+        verify(shipmentService, never()).createShipment(any());
+    }
+
+    @Test
+    @WithMockUser(roles = "DISPATCHER")
+    public void shouldRejectMalformedManifestPayloadWhenValidationFails() throws Exception {
+        Map<String, Object> invalidPayload = Map.of(
+                "trackingNumber", "BAD-REF",
+                "weightLbs", 6000
+        );
+
+        mockMvc.perform(post("/api/shipments")
+                        .header("X-Tenant-ID", "alpha")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidPayload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Constraint Violation"))
+                .andExpect(jsonPath("$.detail").value("Tracking number must match enterprise standard format: CFT-XXXXXX"));
+
+        verify(shipmentService, never()).createShipment(any());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    public void shouldAllowDeleteWhenCallerHasAdminRole() throws Exception {
+        doNothing().when(shipmentService).deleteShipment(9L);
+
+        mockMvc.perform(delete("/api/shipments/9"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Cargo record successfully purged from tracking matrices"));
+
+        verify(shipmentService, times(1)).deleteShipment(eq(9L));
+    }
+
+    @Test
+    @WithMockUser(roles = "DISPATCHER")
+    public void shouldBlockDeleteWhenCallerIsNotAdmin() throws Exception {
+        mockMvc.perform(delete("/api/shipments/9"))
+                .andExpect(status().isForbidden());
+
+        verify(shipmentService, never()).deleteShipment(any());
     }
 }

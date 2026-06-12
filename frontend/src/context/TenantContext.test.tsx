@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
-import { TenantProvider, useTenant } from './TenantContext';
+import { TenantProvider, useTenant, resolveTenantFromEnvironment } from './TenantContext';
 
 describe('TenantContext', () => {
     beforeEach(() => {
@@ -64,6 +64,26 @@ describe('TenantContext', () => {
         expect(() => renderHook(() => useTenant())).toThrow(
             'useTenant must be used within a TenantProvider block'
         );
+    });
+
+    it('prefers query tenant over subdomain and saved tenant', () => {
+        const tenant = resolveTenantFromEnvironment('?tenant=query-alpha', 'sub.certifreight.local', 'saved-alpha');
+        expect(tenant).toBe('query-alpha');
+    });
+
+    it('uses subdomain tenant when query is missing', () => {
+        const tenant = resolveTenantFromEnvironment('', 'alpha.certifreight.local', 'saved-alpha');
+        expect(tenant).toBe('alpha');
+    });
+
+    it('ignores www subdomain and falls back to saved tenant', () => {
+        const tenant = resolveTenantFromEnvironment('', 'www.certifreight.local', 'saved-alpha');
+        expect(tenant).toBe('saved-alpha');
+    });
+
+    it('falls back to anonymous tenant when no source exists', () => {
+        const tenant = resolveTenantFromEnvironment('', 'localhost', null);
+        expect(tenant).toBe('anonymous_tenant');
     });
 });
 

@@ -8,6 +8,20 @@ interface TenantContextType {
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
+export const resolveTenantFromEnvironment = (
+    search: string,
+    hostname: string,
+    savedTenant: string | null
+) => {
+    const urlParams = new URLSearchParams(search);
+    const queryTenant = urlParams.get('tenant');
+
+    const parts = hostname.split('.');
+    const subdomainTenant = parts.length > 2 && parts[0] !== 'www' ? parts[0] : null;
+
+    return queryTenant || subdomainTenant || savedTenant || 'anonymous_tenant';
+};
+
 export const TenantProvider: React.FC<{ children: React.ReactNode; initialTenant?: string }> = ({
                                                                                                     children,
                                                                                                     initialTenant
@@ -23,20 +37,12 @@ export const TenantProvider: React.FC<{ children: React.ReactNode; initialTenant
             return;
         }
 
-        // Production/Dev Discovery Logic Flow:
-        // 1. Check URL query string (?tenant=alpha)
-        // 2. Check hostname subdomain (alpha.certifreight.com)
-        // 3. Fall back to localStorage or anonymous
-        const urlParams = new URLSearchParams(window.location.search);
-        const queryTenant = urlParams.get('tenant');
-
-        const host = window.location.hostname; // e.g., "alpha.certifreight.local"
-        const parts = host.split('.');
-        const subdomainTenant = parts.length > 2 && parts[0] !== 'www' ? parts[0] : null;
-
-        const savedTenant = localStorage.getItem('cf_tenant');
-
-        const resolvedTenant = queryTenant || subdomainTenant || savedTenant || 'anonymous_tenant';
+        // Centralized resolver keeps browser and unit-test behavior aligned.
+        const resolvedTenant = resolveTenantFromEnvironment(
+            window.location.search,
+            window.location.hostname,
+            localStorage.getItem('cf_tenant')
+        );
 
         setCurrentTenant(resolvedTenant);
         localStorage.setItem('cf_tenant', resolvedTenant);

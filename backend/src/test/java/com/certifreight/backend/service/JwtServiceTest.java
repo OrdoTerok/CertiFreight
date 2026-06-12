@@ -31,6 +31,19 @@ class JwtServiceTest {
     }
 
     @Test
+    @DisplayName("Should initialize signing key from configured jwtSecret at lifecycle startup")
+    void shouldInitializeSigningKeyViaPostConstruct() {
+        JwtService initializedService = new JwtService();
+        ReflectionTestUtils.setField(initializedService, "jwtSecret", rawSecretString);
+
+        initializedService.init();
+        String token = initializedService.generateToken("enterprise-alpha", "ROLE_ADMIN");
+
+        assertNotNull(token);
+        assertEquals("enterprise-alpha", initializedService.extractTenantId(token));
+    }
+
+    @Test
     @DisplayName("Should successfully encode and extract claims in a single cryptographic pass")
     void shouldEncodeAndDecodeClaimsSuccessfully() {
         String expectedTenant = "enterprise-alpha";
@@ -58,6 +71,35 @@ class JwtServiceTest {
         } catch (Exception e) {
             // Fallback to absorb differences if your method signatures vary slightly
         }
+    }
+
+    @Test
+    @DisplayName("Should expose tenant claim through extractTenantId convenience method")
+    void shouldExtractTenantIdViaConvenienceMethod() {
+        String token = jwtService.generateToken("tenant-q1", "ROLE_DISPATCHER");
+        assertEquals("tenant-q1", jwtService.extractTenantId(token));
+    }
+
+    @Test
+    @DisplayName("Should report non-expired tokens correctly")
+    void shouldReportTokenAsNotExpired() {
+        String token = jwtService.generateToken("tenant-live", "ROLE_ADMIN");
+        assertFalse(jwtService.isTokenExpired(token));
+    }
+
+    @Test
+    @DisplayName("Should throw ExpiredJwtException when checking expiration on an expired token")
+    void shouldThrowWhenCheckingExpiredToken() {
+        long now = System.currentTimeMillis();
+        String expiredToken = io.jsonwebtoken.Jwts.builder()
+                .setSubject("enterprise-alpha")
+                .claim("role", "ROLE_DISPATCHER")
+                .setIssuedAt(new java.util.Date(now - 10000))
+                .setExpiration(new java.util.Date(now - 5000))
+                .signWith(io.jsonwebtoken.security.Keys.hmacShaKeyFor(rawSecretString.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .compact();
+
+        assertThrows(io.jsonwebtoken.ExpiredJwtException.class, () -> jwtService.isTokenExpired(expiredToken));
     }
 
     @Test

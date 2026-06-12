@@ -221,17 +221,6 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.11</version>
-				<configuration>
-					<excludes>
-						<exclude>com/certifreight/backend/BackendApplication.**</exclude>
-						<exclude>com/certifreight/backend/model/**</exclude>
-						<exclude>com/certifreight/backend/repository/**</exclude>
-						<exclude>com/certifreight/backend/controller/**</exclude>
-						<exclude>com/certifreight/backend/exception/**</exclude>
-						<exclude>com/certifreight/backend/config/**</exclude>
-						<exclude>com/certifreight/backend/security/**</exclude>
-					</excludes>
-				</configuration>
 				<executions>
 					<execution>
 						<goals>

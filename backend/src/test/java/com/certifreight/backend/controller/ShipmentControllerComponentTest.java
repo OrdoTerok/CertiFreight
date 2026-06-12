@@ -91,6 +91,25 @@ public class ShipmentControllerComponentTest {
 
     @Test
     @WithMockUser(roles = "DISPATCHER")
+    public void shouldSeedShipmentForActiveTenant() throws Exception {
+        Shipment seededShipment = new Shipment();
+        seededShipment.setId(10L);
+        seededShipment.setTrackingNumber("TRK-SEED-1");
+        seededShipment.setStatus("PROCESSING_FREIGHT");
+
+        when(shipmentService.seedTestShipmentForActiveTenant()).thenReturn(seededShipment);
+
+        mockMvc.perform(post("/api/shipments/seed"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10L))
+                .andExpect(jsonPath("$.trackingNumber").value("TRK-SEED-1"))
+                .andExpect(jsonPath("$.status").value("PROCESSING_FREIGHT"));
+
+        verify(shipmentService, times(1)).seedTestShipmentForActiveTenant();
+    }
+
+    @Test
+    @WithMockUser(roles = "DISPATCHER")
     public void shouldAcceptAndCommitValidFreightLinkManifest() throws Exception {
         Map<String, Object> inputPayload = Map.of(
                 "trackingNumber", "CFT-333333",

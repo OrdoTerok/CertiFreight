@@ -1,0 +1,34 @@
+{
+  "all": true,
+  "extension": [
+    ".ts",
+    ".tsx"
+  ],
+  "include": [
+    "src/App.tsx",
+    "src/components/AdminConsole.tsx",
+    "src/components/RoleGuard.tsx",
+    "src/api/axiosClient.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test/**",
+    "src/main.tsx",
+    "src/vite-env.d.ts",
+    "src/types/**",
+    "src/assets/**"
+  ],
+  "reporter": [
+    "text",
+    "html"
+  ],
+  "report-dir": "coverage-e2e",
+  "temp-dir": ".nyc_output",
+  "check-coverage": true,
+  "lines": 95,
+  "branches": 95,
+  "functions": 95,
+  "statements": 95
+}
+

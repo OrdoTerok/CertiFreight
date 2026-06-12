@@ -1,9 +1,9 @@
 /**
  * Evaluates whether a custom tracking reference token strictly adheres
- * to the enterprise B2B formatting syntax: CFT-XXXXXX
+ * to the enterprise B2B formatting syntax: CFT-123456 (6 digits only)
  */
 export const validateTrackingFormat = (trackingNum: string): boolean => {
-    const trackingRegex = /^CFT-[A-Z0-9]{6}$/;
+    const trackingRegex = /^CFT-\d{6}$/;
     return trackingRegex.test(trackingNum);
 };
 

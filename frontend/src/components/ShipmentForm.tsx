@@ -15,8 +15,8 @@ export const ShipmentForm: React.FC<ShipmentFormProps> = ({ onSuccess }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleGenerateTracking = () => {
-        const randomHex = Math.random().toString(36).substring(2, 8).toUpperCase();
-        setTrackingNumber(`CFT-${randomHex}`);
+        const sixDigits = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
+        setTrackingNumber(`CFT-${sixDigits}`);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -83,7 +83,7 @@ export const ShipmentForm: React.FC<ShipmentFormProps> = ({ onSuccess }) => {
                             required
                             value={trackingNumber}
                             onChange={(e) => setTrackingNumber(e.target.value)}
-                            placeholder="CFT-XXXXXX"
+                            placeholder="CFT-123456"
                             className="flex-1 bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-sm font-mono text-blue-400 focus:outline-none"
                         />
                         <button

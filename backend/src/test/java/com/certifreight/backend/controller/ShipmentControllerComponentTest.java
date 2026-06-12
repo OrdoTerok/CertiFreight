@@ -4,6 +4,7 @@ import com.certifreight.backend.model.Shipment;
 import com.certifreight.backend.service.ShipmentService;
 import com.certifreight.backend.security.TenantFilter;
 import com.certifreight.backend.config.SecurityConfig;
+import com.certifreight.backend.testsupport.AiShipmentRequestCases;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -168,9 +169,37 @@ public class ShipmentControllerComponentTest {
                         .content(objectMapper.writeValueAsString(invalidPayload)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Constraint Violation"))
-                .andExpect(jsonPath("$.detail").value("Tracking number must match enterprise standard format: CFT-XXXXXX"));
+                .andExpect(jsonPath("$.detail").value("Tracking number must match enterprise standard format: CFT-123456"));
 
         verify(shipmentService, never()).createShipment(any());
+    }
+
+    @Test
+    @WithMockUser(roles = "DISPATCHER")
+    public void shouldEvaluateAiGeneratedBoundaryPayloadsAtComponentLayer() throws Exception {
+        Shipment committedResult = new Shipment();
+        committedResult.setId(99L);
+        committedResult.setTrackingNumber("CFT-A1B2C3");
+        committedResult.setWeightLbs(BigDecimal.valueOf(1000));
+        committedResult.setStatus("MANIFEST_CREATED");
+        when(shipmentService.createShipment(any())).thenReturn(committedResult);
+
+        for (AiShipmentRequestCases.ShipmentCase scenario : AiShipmentRequestCases.all()) {
+            Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("trackingNumber", scenario.trackingNumber());
+            payload.put("weightLbs", scenario.weightLbs());
+
+            var action = mockMvc.perform(post("/api/shipments")
+                    .header("X-Tenant-ID", "alpha")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(payload)));
+
+            if (scenario.valid()) {
+                action.andExpect(status().isCreated());
+            } else {
+                action.andExpect(status().isBadRequest());
+            }
+        }
     }
 
     @Test

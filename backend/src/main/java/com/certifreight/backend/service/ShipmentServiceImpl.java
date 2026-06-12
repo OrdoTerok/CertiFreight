@@ -3,10 +3,13 @@ package com.certifreight.backend.service;
 import com.certifreight.backend.model.Shipment;
 import com.certifreight.backend.model.ShipmentRequest;
 import com.certifreight.backend.repository.ShipmentRepository;
+import com.certifreight.backend.security.TenantContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,8 +65,22 @@ public class ShipmentServiceImpl implements ShipmentService {
      * security exception if an unauthenticated thread bypasses the gateway.
      */
     private String resolveActiveTenant() {
-        return org.springframework.security.core.context.SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal().toString();
+        String tenantId = TenantContext.getTenantId();
+        if (tenantId != null && !tenantId.trim().isEmpty()) {
+            return tenantId;
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null) {
+            throw new RuntimeException("Authentication context missing");
+        }
+
+        tenantId = authentication.getName();
+        if (tenantId == null || tenantId.trim().isEmpty()) {
+            throw new RuntimeException("Tenant identity token missing");
+        }
+        return tenantId;
     }
 
     @Transactional

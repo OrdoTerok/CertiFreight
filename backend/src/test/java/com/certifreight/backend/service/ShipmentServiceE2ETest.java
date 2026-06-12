@@ -121,7 +121,7 @@ public class ShipmentServiceE2ETest {
         String activeTenant = "enterprise-alpha";
 
         when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(activeTenant);
+        when(authentication.getName()).thenReturn(activeTenant);
 
         List<Shipment> mockList = List.of(
                 Shipment.builder().id(1L).tenantId(activeTenant).trackingNumber("CFT-000001").status("MANIFEST_CREATED").build(),
@@ -144,7 +144,7 @@ public class ShipmentServiceE2ETest {
         String activeTenant = "empty-tenant";
 
         when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(activeTenant);
+        when(authentication.getName()).thenReturn(activeTenant);
         when(shipmentRepository.findAll()).thenReturn(List.of());
 
         List<Shipment> result = shipmentService.getShipmentsForActiveTenant();
@@ -181,7 +181,7 @@ public class ShipmentServiceE2ETest {
         String activeTenant = "enterprise-alpha";
 
         when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(activeTenant);
+        when(authentication.getName()).thenReturn(activeTenant);
         when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
         when(nativeQuery.setParameter(anyInt(), any())).thenReturn(nativeQuery);
         when(nativeQuery.executeUpdate()).thenReturn(1);
@@ -216,7 +216,7 @@ public class ShipmentServiceE2ETest {
     @DisplayName("Should throw exception when principal is null")
     void shouldThrowWhenPrincipalNull() {
         when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(null);
+        when(authentication.getName()).thenReturn(null);
 
         assertThrows(RuntimeException.class, () -> shipmentService.getShipmentsForActiveTenant());
     }
@@ -262,7 +262,7 @@ public class ShipmentServiceE2ETest {
         String activeTenant = "test-tenant";
 
         when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(activeTenant);
+        when(authentication.getName()).thenReturn(activeTenant);
         when(shipmentRepository.findAll()).thenReturn(List.of());
 
         shipmentService.getShipmentsForActiveTenant();
@@ -276,7 +276,7 @@ public class ShipmentServiceE2ETest {
         String activeTenant = "new-tenant";
 
         when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(activeTenant);
+        when(authentication.getName()).thenReturn(activeTenant);
         when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
         when(nativeQuery.setParameter(anyInt(), any())).thenReturn(nativeQuery);
         when(nativeQuery.executeUpdate()).thenReturn(1);

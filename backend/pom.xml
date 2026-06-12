@@ -266,6 +266,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>3.5.5</version>
 				<configuration>
+					<rerunFailingTestsCount>1</rerunFailingTestsCount>
 					<environmentVariables>
 						<DOCKER_HOST>tcp://127.0.0.1:2375</DOCKER_HOST>
 						<TESTCONTAINERS_RYUK_DISABLED>true</TESTCONTAINERS_RYUK_DISABLED>

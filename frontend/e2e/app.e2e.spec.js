@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { clickAdaptive } from './utils/selfHealingLocators.js';
 
 const saveCoverage = async (coverage, title) => {
     if (!coverage || typeof coverage !== 'object') {
@@ -183,7 +184,7 @@ test('submits shipment form and renders success banner', async ({ page }) => {
             contentType: 'application/json',
             body: JSON.stringify({
                 id: 123,
-                trackingNumber: 'CFT-ABC123',
+                trackingNumber: 'CFT-100001',
                 weightLbs: 5000,
                 status: 'MANIFEST_CREATED',
             }),
@@ -193,7 +194,7 @@ test('submits shipment form and renders success banner', async ({ page }) => {
     await page.goto('/');
 
     await expect(page.getByText('Assign Isolated Freight')).toBeVisible();
-    await page.getByLabel('Tracking Number').fill('CFT-ABC123');
+    await page.getByLabel('Tracking Number').fill('CFT-100001');
     await page.getByLabel('Cargo Weight (lbs)').fill('5000');
     await page.getByRole('button', { name: 'Commit Freight Link' }).click();
 
@@ -226,7 +227,7 @@ test('renders backend validation error when shipment create fails', async ({ pag
 
     await page.goto('/');
 
-    await page.getByLabel('Tracking Number').fill('CFT-ERR001');
+    await page.getByLabel('Tracking Number').fill('CFT-300001');
     await page.getByLabel('Cargo Weight (lbs)').fill('1200');
     await page.getByRole('button', { name: 'Commit Freight Link' }).click();
 
@@ -250,9 +251,13 @@ test('generates a tracking number when generate button is clicked', async ({ pag
 
     await page.goto('/');
 
-    await page.getByRole('button', { name: '⚡' }).click();
+    await clickAdaptive(page, [
+        (p) => p.getByRole('button', { name: '⚡' }),
+        (p) => p.locator('button[type="button"]').filter({ hasText: '⚡' }),
+        (p) => p.locator('#trackingNumber').locator('xpath=..').locator('button[type="button"]'),
+    ]);
 
-    await expect(page.getByLabel('Tracking Number')).toHaveValue(/CFT-[A-Z0-9]{6}/);
+    await expect(page.getByLabel('Tracking Number')).toHaveValue(/CFT-[0-9]{6}/);
 });
 
 test('displays shipment list when fetched successfully', async ({ page }) => {
@@ -269,13 +274,13 @@ test('displays shipment list when fetched successfully', async ({ page }) => {
              body: JSON.stringify([
                  {
                      id: 1,
-                     trackingNumber: 'CFT-ABC123',
+                     trackingNumber: 'CFT-100001',
                      weightLbs: 5000,
                      status: 'MANIFEST_CREATED',
                  },
                  {
                      id: 2,
-                     trackingNumber: 'CFT-XYZ789',
+                     trackingNumber: 'CFT-200002',
                      weightLbs: 3000,
                      status: 'IN_TRANSIT',
                  },
@@ -286,8 +291,8 @@ test('displays shipment list when fetched successfully', async ({ page }) => {
      await page.goto('/');
 
      // Verify shipments are displayed in the list
-     await expect(page.getByText('CFT-ABC123')).toBeVisible();
-     await expect(page.getByText('CFT-XYZ789')).toBeVisible();
+     await expect(page.getByText('CFT-100001')).toBeVisible();
+     await expect(page.getByText('CFT-200002')).toBeVisible();
 });
 
 test('submits form and displays loading state while submitting', async ({ page }) => {
@@ -319,7 +324,7 @@ test('submits form and displays loading state while submitting', async ({ page }
              contentType: 'application/json',
              body: JSON.stringify({
                  id: 123,
-                 trackingNumber: 'CFT-ABC123',
+                 trackingNumber: 'CFT-100001',
                  weightLbs: 5000,
                  status: 'MANIFEST_CREATED',
              }),
@@ -328,7 +333,7 @@ test('submits form and displays loading state while submitting', async ({ page }
 
      await page.goto('/');
 
-     await page.getByLabel('Tracking Number').fill('CFT-ABC123');
+     await page.getByLabel('Tracking Number').fill('CFT-100001');
      await page.getByLabel('Cargo Weight (lbs)').fill('5000');
      const submitButton = page.getByRole('button', { name: 'Commit Freight Link' });
 
@@ -413,7 +418,7 @@ test('clears form fields after successful shipment creation', async ({ page }) =
              contentType: 'application/json',
              body: JSON.stringify({
                  id: 123,
-                 trackingNumber: 'CFT-ABC123',
+                 trackingNumber: 'CFT-100001',
                  weightLbs: 5000,
                  status: 'MANIFEST_CREATED',
              }),
@@ -422,7 +427,7 @@ test('clears form fields after successful shipment creation', async ({ page }) =
 
      await page.goto('/');
 
-     await page.getByLabel('Tracking Number').fill('CFT-ABC123');
+     await page.getByLabel('Tracking Number').fill('CFT-100001');
      await page.getByLabel('Cargo Weight (lbs)').fill('5000');
      await page.getByRole('button', { name: 'Commit Freight Link' }).click();
 
@@ -459,7 +464,7 @@ test('handles network error when creating shipment', async ({ page }) => {
 
      await page.goto('/');
 
-     await page.getByLabel('Tracking Number').fill('CFT-ABC123');
+     await page.getByLabel('Tracking Number').fill('CFT-100001');
      await page.getByLabel('Cargo Weight (lbs)').fill('5000');
      await page.getByRole('button', { name: 'Commit Freight Link' }).click();
 
@@ -661,7 +666,7 @@ test('handles successful submit with null weight', async ({ page }) => {
              contentType: 'application/json',
              body: JSON.stringify({
                  id: 123,
-                 trackingNumber: 'CFT-ABC123',
+                 trackingNumber: 'CFT-100001',
                  weightLbs: null,
                  status: 'MANIFEST_CREATED',
              }),
@@ -670,7 +675,7 @@ test('handles successful submit with null weight', async ({ page }) => {
 
      await page.goto('/');
 
-     await page.getByLabel('Tracking Number').fill('CFT-ABC123');
+     await page.getByLabel('Tracking Number').fill('CFT-100001');
      // Leave weight empty to test null handling
      await page.getByRole('button', { name: 'Commit Freight Link' }).click();
 

@@ -38,7 +38,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should handle tracking number with hyphen correctly")
     public void shouldHandleTrackingWithHyphen() throws Exception {
         Map<String, Object> payload = Map.of(
-                "trackingNumber", "CFT-ABC123",
+                "trackingNumber", "CFT-100123",
                 "weightLbs", 1000
         );
 
@@ -54,7 +54,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should handle decimal weights with many decimal places")
     public void shouldHandleDecimalWeights() throws Exception {
         Map<String, Object> payload = Map.of(
-                "trackingNumber", "CFT-DEC001",
+                "trackingNumber", "CFT-001001",
                 "weightLbs", new BigDecimal("1234.5678")
         );
 
@@ -70,7 +70,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should handle very deep nested request")
     public void shouldHandleComplexPayload() throws Exception {
         String complexPayload = "{\n" +
-                "  \"trackingNumber\": \"CFT-CPX001\",\n" +
+                "  \"trackingNumber\": \"CFT-550001\",\n" +
                 "  \"weightLbs\": 1000,\n" +
                 "  \"metadata\": {\n" +
                 "    \"nested\": {\n" +
@@ -93,7 +93,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should reject request with NaN value")
     public void shouldRejectNaNValue() throws Exception {
         String nanPayload = "{\n" +
-                "  \"trackingNumber\": \"CFT-NAN01\",\n" +
+                "  \"trackingNumber\": \"CFT-560001\",\n" +
                 "  \"weightLbs\": NaN\n" +
                 "}";
 
@@ -109,7 +109,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should reject request with Infinity value")
     public void shouldRejectInfinityValue() throws Exception {
         String infPayload = "{\n" +
-                "  \"trackingNumber\": \"CFT-INF01\",\n" +
+                "  \"trackingNumber\": \"CFT-570001\",\n" +
                 "  \"weightLbs\": Infinity\n" +
                 "}";
 
@@ -124,7 +124,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @WithMockUser(roles = "DISPATCHER")
     @DisplayName("Should handle request with Unicode characters in tracking number")
     public void shouldHandleUnicodeInTracking() throws Exception {
-        // Should reject as tracking must be CFT-XXXXXX
+        // Should reject as tracking must be CFT-123456
         Map<String, Object> payload = Map.of(
                 "trackingNumber", "CFT-你好01",
                 "weightLbs", 1000
@@ -144,7 +144,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
         String longString = "A".repeat(1000);
 
         Map<String, Object> payload = new HashMap<>();
-        payload.put("trackingNumber", "CFT-LONG1");
+        payload.put("trackingNumber", "CFT-580001");
         payload.put("weightLbs", 1000);
         payload.put("longField", longString);
 
@@ -160,7 +160,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should handle request with numeric strings converted to numbers")
     public void shouldHandleNumericStrings() throws Exception {
         String payload = "{\n" +
-                "  \"trackingNumber\": \"CFT-NUM01\",\n" +
+                "  \"trackingNumber\": \"CFT-590001\",\n" +
                 "  \"weightLbs\": \"5000\"\n" +
                 "}";
 
@@ -176,7 +176,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should reject request with boolean instead of number")
     public void shouldRejectBooleanForNumber() throws Exception {
         String payload = "{\n" +
-                "  \"trackingNumber\": \"CFT-BOOL1\",\n" +
+                "  \"trackingNumber\": \"CFT-600001\",\n" +
                 "  \"weightLbs\": true\n" +
                 "}";
 
@@ -192,7 +192,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should reject duplicate keys (last value should win)")
     public void shouldHandleDuplicateKeys() throws Exception {
         String payload = "{\n" +
-                "  \"trackingNumber\": \"CFT-DUP01\",\n" +
+                "  \"trackingNumber\": \"CFT-610001\",\n" +
                 "  \"weightLbs\": 1000,\n" +
                 "  \"weightLbs\": 2000\n" +
                 "}";
@@ -209,7 +209,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should handle negative weight correctly (should reject)")
     public void shouldRejectNegativeWeight() throws Exception {
         Map<String, Object> payload = Map.of(
-                "trackingNumber", "CFT-NEG02",
+                "trackingNumber", "CFT-980001",
                 "weightLbs", -1000
         );
 
@@ -225,7 +225,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should handle zero weight correctly (should reject)")
     public void shouldRejectZeroWeight() throws Exception {
         Map<String, Object> payload = Map.of(
-                "trackingNumber", "CFT-ZRO01",
+                "trackingNumber", "CFT-990001",
                 "weightLbs", 0
         );
 
@@ -257,7 +257,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should strip leading/trailing whitespace from strings")
     public void shouldHandleLeadingTrailingWhitespace() throws Exception {
         String payload = "{\n" +
-                "  \"trackingNumber\": \"  CFT-WHT01  \",\n" +
+                "  \"trackingNumber\": \"  CFT-640001  \",\n" +
                 "  \"weightLbs\": 1000\n" +
                 "}";
 
@@ -273,7 +273,7 @@ public class PayloadHandlingIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should handle case sensitivity in tracking number")
     public void shouldHandleCaseSensitivityInTracking() throws Exception {
         Map<String, Object> payload = Map.of(
-                "trackingNumber", "CFT-abcdef",
+                "trackingNumber", "CFT-001234",
                 "weightLbs", 1000
         );
 

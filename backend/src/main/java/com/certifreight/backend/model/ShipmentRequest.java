@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 public class ShipmentRequest {
 
     @NotBlank(message = "Tracking reference key code cannot be blank")
-    @Pattern(regexp = "^CFT-[A-Z0-9]{6}$", message = "Tracking number must match enterprise standard format: CFT-XXXXXX")
+    @Pattern(regexp = "^CFT-\\d{6}$", message = "Tracking number must match enterprise standard format: CFT-123456")
     private String trackingNumber;
 
     @NotNull(message = "Cargo weight field is mandatory")

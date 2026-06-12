@@ -4,24 +4,26 @@ import { validateTrackingFormat, formatCargoWeight } from './trackingUtils';
 describe('Logistics Ledger Verification Utilities', () => {
 
     describe('validateTrackingFormat()', () => {
-        it('should pass cleanly on standard conforming alphanumeric sequences', () => {
-            expect(validateTrackingFormat('CFT-A1B2C3')).toBe(true);
+        it('should pass cleanly on standard conforming digit sequences', () => {
+            expect(validateTrackingFormat('CFT-123456')).toBe(true);
             expect(validateTrackingFormat('CFT-000000')).toBe(true);
-            expect(validateTrackingFormat('CFT-ZZZZZZ')).toBe(true);
+            expect(validateTrackingFormat('CFT-999999')).toBe(true);
+        });
+
+        it('should reject alphanumeric sequences that contain letters', () => {
+            expect(validateTrackingFormat('CFT-A1B2C3')).toBe(false);
+            expect(validateTrackingFormat('CFT-ABCDEF')).toBe(false);
+            expect(validateTrackingFormat('CFT-ZZZZZZ')).toBe(false);
         });
 
         it('should reject strings failing the structural length boundaries', () => {
-            expect(validateTrackingFormat('CFT-A1B2C')).toBe(false);   // Too short
-            expect(validateTrackingFormat('CFT-A1B2C3D')).toBe(false); // Too long
-        });
-
-        it('should enforce strict case boundaries', () => {
-            expect(validateTrackingFormat('CFT-abc123')).toBe(false);
+            expect(validateTrackingFormat('CFT-12345')).toBe(false);   // Too short
+            expect(validateTrackingFormat('CFT-1234567')).toBe(false); // Too long
         });
 
         it('should reject malformed or missing prefix markers', () => {
-            expect(validateTrackingFormat('TRK-A1B2C3')).toBe(false);
-            expect(validateTrackingFormat('A1B2C3')).toBe(false);
+            expect(validateTrackingFormat('TRK-123456')).toBe(false);
+            expect(validateTrackingFormat('123456')).toBe(false);
         });
     });
 

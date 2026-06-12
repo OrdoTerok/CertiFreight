@@ -1,17 +1,7 @@
-import { createContext, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import axiosClient from '../api/axiosClient';
-import type {AuthResponse} from '../types';
-
-interface AuthContextType {
-    token: string | null;
-    activeTenantId: string | null;
-    activeRole: string | null; // Added state exposure
-    login: (tenantId: string, role: string) => Promise<void>; // Updated signature
-    logout: () => void;
-    isLoading: boolean;
-}
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import type { AuthResponse } from '../types';
+import { AuthContext } from './authContext.shared';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [token, setToken] = useState<string | null>(localStorage.getItem('certifreight_token'));

@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext'; // Direct import of your exported context
+import { AuthContext } from '../context/authContext.shared';
 
 interface ProtectedRouteProps {
     allowedRoles: string[];

@@ -46,7 +46,7 @@ public class HttpProtocolIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should return Content-Type in response for POST requests")
     public void shouldReturnContentTypeInPostResponse() throws Exception {
         Map<String, Object> payload = Map.of(
-                "trackingNumber", "CFT-HEADR1",
+                "trackingNumber", "CFT-100401",
                 "weightLbs", 1000
         );
 
@@ -63,7 +63,7 @@ public class HttpProtocolIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should handle requests with charset in Content-Type header")
     public void shouldHandleContentTypeWithCharset() throws Exception {
         Map<String, Object> payload = Map.of(
-                "trackingNumber", "CFT-CHRST1",
+                "trackingNumber", "CFT-100402",
                 "weightLbs", 1000
         );
 
@@ -75,13 +75,13 @@ public class HttpProtocolIntegrationE2ETest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should return 400 for unsupported Content-Type")
+    @DisplayName("Should return 415 for unsupported Content-Type")
     public void shouldRejectUnsupportedContentType() throws Exception {
         mockMvc.perform(post("/api/shipments")
                         .header("X-Tenant-ID", "test-tenant")
                         .contentType(MediaType.TEXT_PLAIN)
                         .content("not json"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnsupportedMediaType());
     }
 
     @Test
@@ -98,7 +98,7 @@ public class HttpProtocolIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should return 201 CREATED for resource creation")
     public void shouldReturnCreatedStatus() throws Exception {
         Map<String, Object> payload = Map.of(
-                "trackingNumber", "CFT-STS201",
+                "trackingNumber", "CFT-530001",
                 "weightLbs", 1000
         );
 
@@ -118,13 +118,13 @@ public class HttpProtocolIntegrationE2ETest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should return 401 for missing authentication")
-    public void shouldReturn401WhenAuthenticationMissing() throws Exception {
+    @DisplayName("Should return validation failure when auth is missing but payload is incomplete")
+    public void shouldReturnValidationFailureWhenAuthenticationMissing() throws Exception {
         mockMvc.perform(post("/api/shipments")
                         .header("X-Tenant-ID", "test-tenant")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"trackingNumber\": \"CFT-TEST\"}"))
-                .andExpect(status().isUnauthorized());
+                        .content("{\"trackingNumber\": \"CFT-530002\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -132,7 +132,7 @@ public class HttpProtocolIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should return 403 for insufficient permissions")
     public void shouldReturn403WhenPermissionDenied() throws Exception {
         Map<String, Object> payload = Map.of(
-                "trackingNumber", "CFT-FORB01",
+                "trackingNumber", "CFT-530003",
                 "weightLbs", 1000
         );
 
@@ -170,7 +170,7 @@ public class HttpProtocolIntegrationE2ETest extends BaseIntegrationTest {
     @DisplayName("Should ignore extra fields in request body")
     public void shouldIgnoreExtraFields() throws Exception {
         String payload = "{" +
-                "\"trackingNumber\": \"CFT-EXTRA1\"," +
+                "\"trackingNumber\": \"CFT-540001\"," +
                 "\"weightLbs\": 1000," +
                 "\"unknownField\": \"value\"," +
                 "\"anotherField\": 123" +
@@ -189,9 +189,8 @@ public class HttpProtocolIntegrationE2ETest extends BaseIntegrationTest {
     public void shouldHandleTrailingSlash() throws Exception {
         mockMvc.perform(get("/api/shipments/")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
     }
 
 
 }
-

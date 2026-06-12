@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/certifreight
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: c3VwZXItc2VjcmV0LWVudGVycHJpc2UtY2VydGlmcmVpZ2h0LXNpZ25pbmcta2V5LXN0cmluZw==
+    expiration-ms: 86400000
+

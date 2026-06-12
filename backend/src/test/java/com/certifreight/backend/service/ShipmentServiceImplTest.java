@@ -3,7 +3,6 @@ package com.certifreight.backend.service;
 import com.certifreight.backend.model.ShipmentRequest;
 import com.certifreight.backend.model.Shipment;
 import com.certifreight.backend.repository.ShipmentRepository;
-import com.certifreight.backend.repository.TenantRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.AfterEach;
@@ -28,7 +27,6 @@ import static org.mockito.Mockito.*;
 class ShipmentServiceImplTest {
 
     @Mock private ShipmentRepository shipmentRepository;
-    @Mock private TenantRepository tenantRepository;
     @Mock private EntityManager entityManager;
     @Mock private Query nativeQuery;
     @Mock private SecurityContext securityContext;
@@ -77,7 +75,7 @@ class ShipmentServiceImplTest {
 
         // 1. Stub the security context to provide the tenant name across access strategies
         when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(activeTenant);
+        when(authentication.getName()).thenReturn(activeTenant);
 
         // 2. Stub the fluent entity manager native query chain
         when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
@@ -112,7 +110,7 @@ class ShipmentServiceImplTest {
 
         // Mock the security context so internal resolveActiveTenant() executes cleanly
         when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(activeTenant);
+        when(authentication.getName()).thenReturn(activeTenant);
 
         // ALIGNED MOCK: Mock findAll() to match your actual service layer implementation
         java.util.List<Shipment> mockList = java.util.List.of(
@@ -149,17 +147,18 @@ class ShipmentServiceImplTest {
         // Force the branch condition where the authentication object is completely null
         when(securityContext.getAuthentication()).thenReturn(null);
 
-        assertThrows(RuntimeException.class, () -> {
-            shipmentService.getShipmentsForActiveTenant();
-        }, "A null authentication framework context must trigger the security branch fallback path");    }
+        assertThrows(RuntimeException.class, () -> shipmentService.getShipmentsForActiveTenant(),
+                "A null authentication framework context must trigger the security branch fallback path");
+    }
 
     @Test
     @DisplayName("Read Ledger: Should handle branch when principal or name extraction resolves to null")
     void shouldHandleNullPrincipalBranch() {
         // Force the condition where auth exists but has an uninitialized name identity string
         when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(null);
 
-        assertThrows(RuntimeException.class, () -> {
-            shipmentService.getShipmentsForActiveTenant();
-        }, "An unassigned tenant identification token must exit through the defensive code branch");    }
+        assertThrows(RuntimeException.class, () -> shipmentService.getShipmentsForActiveTenant(),
+                "An unassigned tenant identification token must exit through the defensive code branch");
+    }
 }

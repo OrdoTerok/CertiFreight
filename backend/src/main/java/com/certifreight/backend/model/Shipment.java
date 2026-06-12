@@ -28,7 +28,7 @@ public class Shipment {
     @Column(nullable = false, length = 50)
     private String status;
 
-    @Column(name = "weight_lbs", precision = 10, scale = 2)
+    @Column(name = "weight_lbs", precision = 12, scale = 2)
     private BigDecimal weightLbs;
 
     @Column(name = "created_at", updatable = false)

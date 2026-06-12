@@ -28,7 +28,7 @@ class ShipmentRequestValidationTest {
     @DisplayName("Valid DTO configurations should pass validation without violations")
     void validDtoShouldHaveNoViolations() {
         ShipmentRequest request = new ShipmentRequest();
-        request.setTrackingNumber("CFT-A1B2C3");
+        request.setTrackingNumber("CFT-112233");
         request.setWeightLbs(new BigDecimal("5500.00"));
 
         Set<ConstraintViolation<ShipmentRequest>> violations = validator.validate(request);
@@ -55,7 +55,7 @@ class ShipmentRequestValidationTest {
     @DisplayName("Should flag violation when weight parameter falls below mandatory minimum scale limits")
     void weightBelowMinimumShouldFail() {
         ShipmentRequest request = new ShipmentRequest();
-        request.setTrackingNumber("CFT-A1B2C3"); // Guaranteed valid pattern match
+        request.setTrackingNumber("CFT-112233"); // Guaranteed valid pattern match
         request.setWeightLbs(new BigDecimal("0.00")); // Fails @DecimalMin constraint
 
         Set<ConstraintViolation<ShipmentRequest>> violations = validator.validate(request);

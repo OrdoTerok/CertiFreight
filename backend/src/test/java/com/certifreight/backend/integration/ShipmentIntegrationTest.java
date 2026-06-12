@@ -81,6 +81,6 @@ public class ShipmentIntegrationTest extends BaseIntegrationTest {
                         .content(objectMapper.writeValueAsString(invalidPayload)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Constraint Violation"))
-                .andExpect(jsonPath("$.detail").value("Tracking number must match enterprise standard format: CFT-XXXXXX"));
+                .andExpect(jsonPath("$.detail").value("Tracking number must match enterprise standard format: CFT-123456"));
     }
 }

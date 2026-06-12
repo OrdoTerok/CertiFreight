@@ -83,4 +83,34 @@ describe('Dashboard Feature View Component Matrix', () => {
             expect(axiosClient.get).toHaveBeenCalledTimes(2);
         });
     });
+
+    it('simulates an unauthenticated breach request and surfaces blocked gateway message', async () => {
+        const user = userEvent.setup();
+
+        vi.mocked(axiosClient.get)
+            .mockResolvedValueOnce({ data: [] })
+            .mockRejectedValueOnce({
+                response: {
+                    data: {
+                        detail: 'Unauthorized'
+                    }
+                }
+            });
+
+        render(<Dashboard />);
+
+        await waitFor(() => {
+            expect(axiosClient.get).toHaveBeenCalledTimes(1);
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Simulate System Breach Test' }));
+
+        await waitFor(() => {
+            expect(axiosClient.get).toHaveBeenNthCalledWith(2, '/shipments', {
+                headers: { Authorization: '' }
+            });
+        });
+
+        expect(screen.getByText('Breach Blocked by Gateway: "Unauthorized"')).toBeInTheDocument();
+    });
 });
